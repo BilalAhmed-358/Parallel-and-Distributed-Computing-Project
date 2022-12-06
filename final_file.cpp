@@ -1,6 +1,3 @@
-// gcc -g -Wall -fopenmp -o matrix matrix.c
-
-#include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
 #include <time.h>
@@ -10,18 +7,31 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+    string one = "thread0and1.txt";
+    string two = "thread2and3.txt";
+    string three = "thread4and5.txt";
+    string four = "thread6and7.txt";
+    ofstream one_;
+    ofstream two_;
+    ofstream three_;
+    ofstream four_;
+    one_.open(one);
+    two_.open(two);
+    three_.open(three);
+    four_.open(four);
     double start_time = omp_get_wtime();
     int thread_count = stoi(argv[1], NULL, 10);
     int i = 0, j = 0, p = 0, q = 0;
     int sum = 0, count = 0;
-    int size_of_matrix = 30;
+    int size_of_matrix = 2000;
     int filter_size = 5;
+    int convolution_matrix_size = size_of_matrix - filter_size + 1;
     int complete_filter = filter_size * filter_size;
-    int middle_filter = filter_size / 2;
+    int middle_filter = convolution_matrix_size / 2;
     int core_matrix = size_of_matrix - middle_filter;
 
     int **matrix_o = (int **)malloc(size_of_matrix * sizeof(int *));
-    int **matrix_d = (int **)malloc(size_of_matrix * sizeof(int *));
+    int **convolution_matrix = (int **)malloc(convolution_matrix_size * sizeof(int *));
     int **filter = (int **)malloc(filter_size * sizeof(int *));
 
     ofstream matrix;
@@ -29,7 +39,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < size_of_matrix; i++)
     {
         matrix_o[i] = (int *)malloc(size_of_matrix * sizeof(int));
-        matrix_d[i] = (int *)malloc(size_of_matrix * sizeof(int));
+        convolution_matrix[i] = (int *)malloc(convolution_matrix_size * sizeof(int));
         for (j = 0; j < size_of_matrix; j++)
         {
             matrix_o[i][j] = rand() % 256;
@@ -77,138 +87,161 @@ int main(int argc, char *argv[])
     //     }
     //     cout << "]" << endl;
     // }
-    ofstream ij;
-    ij.open("ij.txt");
-#pragma omp parallel num_threads(thread_count) private(sum, i, j, p, q, count) shared(matrix_d, matrix_o)
+#pragma omp parallel num_threads(thread_count) private(sum, i, j, p, q, count) shared(convolution_matrix, matrix_o)
     {
-#pragma omp for schedule(dynamic)
-        for (i = middle_filter; i < core_matrix; i++)
+        if (omp_get_thread_num() == 0 || omp_get_thread_num() == 1)
         {
-            for (j = middle_filter; j < core_matrix; j++)
+#pragma omp parallel for schedule(dynamic)
+            for (i = 0; i < middle_filter; i++)
             {
-                sum = 0;
-                for (p = 0; p < filter_size; p++)
+
+                for (j = 0; j < middle_filter; j++)
                 {
-                    for (q = 0; q < filter_size; q++)
+                    sum = 0, count = 0;
+                    for (p = 0; p < filter_size; p++)
                     {
-                        sum += filter[p][q] * matrix_o[i - middle_filter + p][j - middle_filter + q];
-                        cout << sum << endl;
+                        for (q = 0; q < filter_size; q++)
+                        {
+                            count++;
+                            sum += filter[p][q] * matrix_o[i][j];
+                        }
                     }
+                    convolution_matrix[i][j] = sum / count;
                 }
-                matrix_d[i][j] = sum / complete_filter;
             }
-        }
-
-        // printf("Elapsed time with %d threads is %f\n", thread_count, omp_get_wtime() - start_time);
-
-        //#	pragma omp parallel for num_threads(thread_count) private(sum,i,j,p,q,count) shared(matrix_d,matrix_o) schedule(dynamic)
-
-#pragma omp for schedule(dynamic)
-        for (i = 0; i < middle_filter; i++)
-        {
-            for (j = 0; j < middle_filter; j++)
+            if (omp_get_thread_num() == 0)
             {
-                // printf("\n%d: Testing for i=%d,j=%d", omp_get_thread_num(), i, j);
-                sum = 0, count = 0;
-                for (p = 0; p < filter_size; p++)
+                for (i = 0; i < middle_filter; i++)
                 {
-                    for (q = 0; q < filter_size; q++)
+                    for (j = 0; j < middle_filter; j++)
                     {
-                        // printf("\n\t%d: Testing for i=%d,j=%d, p=%d, q=%d", omp_get_thread_num(), i, j, p, q);
-                        if (i - middle_filter + p >= 0 && i - middle_filter + p < size_of_matrix && j - middle_filter + q >= 0 && j - middle_filter + q < size_of_matrix)
-                        {
-                            // printf("\n\t%d: Calculating for i=%d, j=%d, p=%d, q=%d", omp_get_thread_num(), i, j, p, q);
-                            count++;
-                            sum += filter[p][q] * matrix_o[i - middle_filter + p][j - middle_filter + q];
-                        }
+                        one_ << convolution_matrix[i][j] << " ";
+                        // cout << convolution_matrix[i][j] << " ";
                     }
+                    one_ << endl;
+                    // cout << endl;
                 }
-                matrix_d[i][j] = sum / count;
             }
         }
 
-#pragma omp for schedule(dynamic)
-        for (i = 0; i < middle_filter; i++)
+        if (omp_get_thread_num() == 2 || omp_get_thread_num() == 3)
         {
-            for (j = core_matrix; j < size_of_matrix; j++)
+#pragma omp parallel for schedule(dynamic)
+            for (i = 0; i < middle_filter; i++)
             {
-                // printf("\n%d: Testing for i=%d,j=%d",omp_get_thread_num(),i,j);//PAUSA
-                sum = 0, count = 0;
-                for (p = 0; p < filter_size; p++)
-                    for (q = 0; q < filter_size; q++)
+                for (j = middle_filter; j < convolution_matrix_size; j++)
+                {
+                    sum = 0, count = 0;
+                    for (p = 0; p < filter_size; p++)
                     {
-                        // printf("\n\t%d: Testing for i=%d,j=%d, p=%d, q=%d",omp_get_thread_num(),i,j,p,q);PAUSA
-                        if (i - middle_filter + p >= 0 && i - middle_filter + p < size_of_matrix && j - middle_filter + q >= 0 && j - middle_filter + q < size_of_matrix)
+                        for (q = 0; q < filter_size; q++)
                         {
-                            // printf("\n\t%d: Calculating for i=%d, j=%d, p=%d, q=%d", omp_get_thread_num(), i, j, p, q);
                             count++;
-                            sum += filter[p][q] * matrix_o[i - middle_filter + p][j - middle_filter + q];
+                            sum += filter[p][q] * matrix_o[i][j];
                         }
                     }
-                matrix_d[i][j] = sum / count;
+                    convolution_matrix[i][j] = sum / count;
+                }
+            }
+            if (omp_get_thread_num() == 2)
+            {
+                for (i = 0; i < middle_filter; i++)
+                {
+                    for (j = middle_filter; j < convolution_matrix_size; j++)
+                    {
+                        two_ << convolution_matrix[i][j] << " ";
+                        // cout << convolution_matrix[i][j] << " ";
+                    }
+                    two_ << endl;
+                    // cout << endl;
+                }
             }
         }
 
-#pragma omp for schedule(dynamic)
-        for (i = core_matrix; i < size_of_matrix; i++)
+        if (omp_get_thread_num() == 4 || omp_get_thread_num() == 5)
         {
-            for (j = 0; j < middle_filter; j++)
+#pragma omp parallel for schedule(dynamic)
+            for (i = middle_filter; i < convolution_matrix_size; i++)
             {
-
-                // printf("\n%d: Testing for i=%d,j=%d",omp_get_thread_num(),i,j);//PAUSA
-                sum = 0, count = 0;
-                for (p = 0; p < filter_size; p++)
-                    for (q = 0; q < filter_size; q++)
+                for (j = 0; j < middle_filter; j++)
+                {
+                    sum = 0, count = 0;
+                    for (p = 0; p < filter_size; p++)
                     {
-                        // printf("\n\t%d: Testing for i=%d,j=%d, p=%d, q=%d",omp_get_thread_num(),i,j,p,q);PAUSA
-                        if (i - middle_filter + p >= 0 && i - middle_filter + p < size_of_matrix && j - middle_filter + q >= 0 && j - middle_filter + q < size_of_matrix)
+                        for (q = 0; q < filter_size; q++)
                         {
-                            // printf("\n\t%d: Calculating for i=%d, j=%d, p=%d, q=%d",omp_get_thread_num(),i,j,p,q);PAUSA
                             count++;
-                            sum += filter[p][q] * matrix_o[i - middle_filter + p][j - middle_filter + q];
+                            sum += filter[p][q] * matrix_o[i][j];
                         }
                     }
-                matrix_d[i][j] = sum / count;
+
+                    convolution_matrix[i][j] = sum / count;
+                }
+            }
+            if (omp_get_thread_num() == 4)
+            {
+                for (i = middle_filter; i < convolution_matrix_size; i++)
+                {
+                    for (j = 0; j < middle_filter; j++)
+                    {
+                        // cout << convolution_matrix[i][j] << " ";
+                        three_ << convolution_matrix[i][j] << " ";
+                    }
+                    three_ << endl;
+                    // cout << endl;
+                }
             }
         }
 
-#pragma omp for schedule(dynamic)
-        for (i = core_matrix; i < size_of_matrix; i++)
+        if (omp_get_thread_num() == 6 || omp_get_thread_num() == 7)
         {
-            for (j = core_matrix; j < size_of_matrix; j++)
+#pragma omp parallel for schedule(dynamic)
+            for (i = middle_filter; i < convolution_matrix_size; i++)
             {
-                // printf("\n%d: Testing for i=%d,j=%d",omp_get_thread_num(),i,j);//PAUSA
-                sum = 0, count = 0;
-                for (p = 0; p < filter_size; p++)
-                    for (q = 0; q < filter_size; q++)
-                    {
-                        // printf("\n\t%d: Testing for i=%d,j=%d, p=%d, q=%d",omp_get_thread_num(),i,j,p,q);PAUSA
-                        if (i - middle_filter + p >= 0 && i - middle_filter + p < size_of_matrix && j - middle_filter + q >= 0 && j - middle_filter + q < size_of_matrix)
+                for (j = middle_filter; j < convolution_matrix_size; j++)
+                {
+                    sum = 0, count = 0;
+                    for (p = 0; p < filter_size; p++)
+                        for (q = 0; q < filter_size; q++)
                         {
-                            // printf("\n\t%d: Calculating for i=%d, j=%d, p=%d, q=%d",omp_get_thread_num(),i,j,p,q);PAUSA
                             count++;
-                            sum += filter[p][q] * matrix_o[i - middle_filter + p][j - middle_filter + q];
+                            sum += filter[p][q] * matrix_o[i][j];
                         }
+                    convolution_matrix[i][j] = sum / count;
+                }
+            }
+            if (omp_get_thread_num() == 6)
+            {
+                for (i = middle_filter; i < convolution_matrix_size; i++)
+                {
+                    for (j = middle_filter; j < convolution_matrix_size; j++)
+                    {
+                        // cout << convolution_matrix[i][j] << " ";
+                        four_ << convolution_matrix[i][j] << " ";
                     }
-                matrix_d[i][j] = sum / count;
+                    // cout << endl;
+                    four_ << endl;
+                }
             }
         }
     }
+    one_.close();
+    two_.close();
+    three_.close();
+    four_.close();
+    printf("Time take to parallely calculate convolution of the matrix using %d threads is %f seconds.\n", thread_count, omp_get_wtime() - start_time);
 
-    printf("Elapsed time with %d threads is %f\n", thread_count, omp_get_wtime() - start_time);
-
-    // printing matrixd
+    // Storing covolution matrix in file
     ofstream mat_d;
-    mat_d.open("Matrix_d.txt");
-    for (i = 0; i < size_of_matrix; i++)
+    mat_d.open("ConvolutionMatrix.txt");
+    for (i = 0; i < convolution_matrix_size; i++)
     {
-        // printf("[ ");
-        for (j = 0; j < size_of_matrix; j++)
+        for (j = 0; j < convolution_matrix_size; j++)
         {
-            mat_d << matrix_d[i][j] << " ";
+            // cout << convolution_matrix[i][j] << endl;
+            mat_d << convolution_matrix[i][j] << " ";
         }
         mat_d << endl;
-        // printf("]\n");
     }
     return 0;
 }
