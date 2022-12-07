@@ -20,11 +20,11 @@ int main(int argc, char *argv[])
     three_.open(three);
     four_.open(four);
     double start_time = omp_get_wtime();
-    int thread_count = stoi(argv[1], NULL, 10);
+    int thread_count = stoi(argv[3], NULL, 10);
     int i = 0, j = 0, p = 0, q = 0;
     int sum = 0, count = 0;
-    int size_of_matrix = 2000;
-    int filter_size = 5;
+    int size_of_matrix = stoi(argv[1], NULL, 10);
+    int filter_size = stoi(argv[2], NULL, 10);
     int convolution_matrix_size = size_of_matrix - filter_size + 1;
     int complete_filter = filter_size * filter_size;
     int middle_filter = convolution_matrix_size / 2;
