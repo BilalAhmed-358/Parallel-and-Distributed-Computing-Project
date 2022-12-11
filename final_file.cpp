@@ -66,10 +66,7 @@ int main(int argc, char *argv[])
         filter[i] = (int *)malloc(filter_size * sizeof(int));
         for (j = 0; j < filter_size; j++)
         {
-            if (j % 2 == 0 && i % 2 == 0)
-                filter[i][j] = 1;
-            else
-                filter[i][j] = 0;
+            filter[i][j] = 1;
 
             filter_matrix << filter[i][j] << " ";
         }
@@ -103,7 +100,7 @@ int main(int argc, char *argv[])
                         for (q = 0; q < filter_size; q++)
                         {
                             count++;
-                            sum += filter[p][q] * matrix_o[i][j];
+                            sum += filter[p][q] * matrix_o[p + i][q + j];
                         }
                     }
                     convolution_matrix[i][j] = sum / count;
@@ -137,7 +134,7 @@ int main(int argc, char *argv[])
                         for (q = 0; q < filter_size; q++)
                         {
                             count++;
-                            sum += filter[p][q] * matrix_o[i][j];
+                            sum += filter[p][q] * matrix_o[p + i][q + j];
                         }
                     }
                     convolution_matrix[i][j] = sum / count;
@@ -171,7 +168,7 @@ int main(int argc, char *argv[])
                         for (q = 0; q < filter_size; q++)
                         {
                             count++;
-                            sum += filter[p][q] * matrix_o[i][j];
+                            sum += filter[p][q] * matrix_o[p + i][q + j];
                         }
                     }
 
@@ -205,7 +202,7 @@ int main(int argc, char *argv[])
                         for (q = 0; q < filter_size; q++)
                         {
                             count++;
-                            sum += filter[p][q] * matrix_o[i][j];
+                            sum += filter[p][q] * matrix_o[p + i][q + j];
                         }
                     convolution_matrix[i][j] = sum / count;
                 }
@@ -229,7 +226,6 @@ int main(int argc, char *argv[])
     two_.close();
     three_.close();
     four_.close();
-    printf("Time take to parallely calculate convolution of the matrix using %d threads is %f seconds.\n", thread_count, omp_get_wtime() - start_time);
 
     // Storing covolution matrix in file
     ofstream mat_d;
@@ -243,5 +239,6 @@ int main(int argc, char *argv[])
         }
         mat_d << endl;
     }
+    printf("Time take to parallely calculate convolution of the matrix using %d threads is %.4f seconds.\n", thread_count, omp_get_wtime() - start_time);
     return 0;
 }
