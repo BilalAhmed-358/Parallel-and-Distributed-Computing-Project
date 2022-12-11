@@ -7,19 +7,28 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+    // Naming files for storing local results of each thread
     string one = "thread0and1.txt";
     string two = "thread2and3.txt";
     string three = "thread4and5.txt";
     string four = "thread6and7.txt";
+
+    // Making ofstream pointers for storing local results of each thread
     ofstream one_;
     ofstream two_;
     ofstream three_;
     ofstream four_;
+
+    // opening files for storing local results of each thread
     one_.open(one);
     two_.open(two);
     three_.open(three);
     four_.open(four);
+
+    // timer start to keep track of how much time taken to complete the given task
     double start_time = omp_get_wtime();
+
+    // declaring variables used throughout the program
     int thread_count = stoi(argv[3], NULL, 10);
     int i = 0, j = 0, p = 0, q = 0;
     int sum = 0, count = 0;
@@ -30,10 +39,14 @@ int main(int argc, char *argv[])
     int middle_filter = convolution_matrix_size / 2;
     int core_matrix = size_of_matrix - middle_filter;
 
+    // Allocating memory for the orignial matrix
     int **matrix_o = (int **)malloc(size_of_matrix * sizeof(int *));
     int **convolution_matrix = (int **)malloc(convolution_matrix_size * sizeof(int *));
+
+    // Allocating memory for the filter matrix
     int **filter = (int **)malloc(filter_size * sizeof(int *));
 
+    // Assigning values to the original matrix and storing them in a file
     ofstream matrix;
     matrix.open("Original_matrix.txt");
     for (i = 0; i < size_of_matrix; i++)
@@ -48,7 +61,9 @@ int main(int argc, char *argv[])
         matrix << endl;
     }
     matrix.close();
+
     // printing out the matrix
+
     // for (i = 0; i < size_of_matrix; i++)
     // {
     //     printf("[ ");
@@ -58,6 +73,8 @@ int main(int argc, char *argv[])
     //     }
     //     printf("]\n");
     // }
+
+    // Assigning values to the filter matrix and storing it in a file
 
     ofstream filter_matrix;
     filter_matrix.open("filter_matrix.txt");
@@ -74,7 +91,8 @@ int main(int argc, char *argv[])
     }
     filter_matrix.close();
 
-    // printout the filter matrix
+    // Printout the filter matrix
+
     // for (i = 0; i < filter_size; i++)
     // {
     //     cout << "[ ";
@@ -84,8 +102,12 @@ int main(int argc, char *argv[])
     //     }
     //     cout << "]" << endl;
     // }
+
+    // Beginning of parallel region
+
 #pragma omp parallel num_threads(thread_count) private(sum, i, j, p, q, count) shared(convolution_matrix, matrix_o)
     {
+        // Calculating 1st Quadrant of matrix
         if (omp_get_thread_num() == 0 || omp_get_thread_num() == 1)
         {
 #pragma omp parallel for schedule(dynamic)
@@ -121,6 +143,8 @@ int main(int argc, char *argv[])
             }
         }
 
+        // Calculating 2nd Quadrant of matrix
+
         if (omp_get_thread_num() == 2 || omp_get_thread_num() == 3)
         {
 #pragma omp parallel for schedule(dynamic)
@@ -154,6 +178,8 @@ int main(int argc, char *argv[])
                 }
             }
         }
+
+        // Calculating 3rd Quadrant of matrix
 
         if (omp_get_thread_num() == 4 || omp_get_thread_num() == 5)
         {
@@ -190,6 +216,8 @@ int main(int argc, char *argv[])
             }
         }
 
+        // Calculating 4th Quadrant of matrix
+
         if (omp_get_thread_num() == 6 || omp_get_thread_num() == 7)
         {
 #pragma omp parallel for schedule(dynamic)
@@ -222,12 +250,16 @@ int main(int argc, char *argv[])
             }
         }
     }
+
+    // Closing all the files made for storing local results
+
     one_.close();
     two_.close();
     three_.close();
     four_.close();
 
     // Storing covolution matrix in file
+
     ofstream mat_d;
     mat_d.open("ConvolutionMatrix.txt");
     for (i = 0; i < convolution_matrix_size; i++)
