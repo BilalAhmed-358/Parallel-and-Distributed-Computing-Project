@@ -26,7 +26,6 @@ int main(int argc, char *argv[])
     four_.open(four);
 
     // timer start to keep track of how much time taken to complete the given task
-    double start_time = omp_get_wtime();
 
     // declaring variables used throughout the program
     int thread_count = stoi(argv[3], NULL, 10);
@@ -105,6 +104,7 @@ int main(int argc, char *argv[])
 
     // Beginning of parallel region
 
+    double start_time = omp_get_wtime();
 #pragma omp parallel num_threads(thread_count) private(sum, i, j, p, q, count) shared(convolution_matrix, matrix_o)
     {
         // Calculating 1st Quadrant of matrix
@@ -258,6 +258,8 @@ int main(int argc, char *argv[])
     three_.close();
     four_.close();
 
+    printf("Time take to parallely calculate convolution of the matrix using %d threads is %.4f seconds.\n", thread_count, omp_get_wtime() - start_time);
+
     // Storing covolution matrix in file
 
     ofstream mat_d;
@@ -271,6 +273,5 @@ int main(int argc, char *argv[])
         }
         mat_d << endl;
     }
-    printf("Time take to parallely calculate convolution of the matrix using %d threads is %.4f seconds.\n", thread_count, omp_get_wtime() - start_time);
     return 0;
 }
