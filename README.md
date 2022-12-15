@@ -25,7 +25,7 @@ $ ./final_file <size of matrix> <size of filter> <number of threads>
 $ ./final_file 1000 50 8
 ```
 
-## Screnshot
+## Screenshot
 
 <hr>
 
